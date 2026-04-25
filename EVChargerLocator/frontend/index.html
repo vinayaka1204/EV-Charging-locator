@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <title>EV & Fuel Station Locator | Premium Navigation</title>
+  <script>
+    if (!localStorage.getItem('evcharger_user') || !localStorage.getItem('evcharger_token')) {
+      window.location.replace('login.html');
+    }
+  </script>
+  <meta name="description"
+    content="Find real EV charging stations near you with Google Maps-style navigation, turn-by-turn directions, and live distance tracking.">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
+</head>
+
+<body>
+
+  <!-- GOOGLE SIDEBAR -->
+  <div class="google-sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-item menu-toggle">
+        <i class="fas fa-bars"></i>
+      </div>
+
+      <div class="sidebar-item" id="navSavedBtn">
+        <i class="fas fa-bookmark"></i>
+        <span>Saved</span>
+      </div>
+
+      <div class="sidebar-item" id="navRecentsBtn">
+        <i class="fas fa-history"></i>
+        <span>Recents</span>
+      </div>
+
+      <div class="sidebar-item active" id="navDestBtn">
+        <div class="dest-icon-wrapper">
+          <i class="fas fa-location-arrow"></i>
+        </div>
+        <span class="dest-label">Destination</span>
+        <span class="dest-time" id="sbDestTime">-- min</span>
+      </div>
+
+      <div class="sidebar-item lightning-btn">
+        <div class="lightning-wrapper">
+          <i class="fas fa-bolt"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-item" id="profileSidebarBtn">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </div>
+      <div class="sidebar-item" id="logoutSidebarBtn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-bg-animation"></div>
+    <div class="loading-content">
+      <div class="innovative-loader">
+        <div class="loader-circle"></div>
+        <div class="loader-icon"><i class="fas fa-bolt"></i></div>
+      </div>
+      <div class="loading-brand">
+        EV Locator
+      </div>
+      <p id="loadingText" style="color: rgba(255,255,255,0.9); margin-top: 10px; font-weight: 500; font-size: 15px;">
+        Detecting your location...</p>
+    </div>
+  </div>
+  <!-- FAILSAFE: Force-hide loading overlay after 2.5s no matter what -->
+  <script>
+    setTimeout(function () {
+      var el = document.getElementById('loadingOverlay');
+      if (el) el.classList.add('hidden');
+    }, 2500);
+  </script>
+
+  <!-- ============= NORMAL MODE: Search + Filters ============= -->
+  <div id="normalUI">
+    <div class="top-left-controls">
+      <div class="omnibox" id="mainOmnibox">
+        <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+        <input id="searchInput" type="text" placeholder="Search EV stations or places..." autocomplete="off">
+        <button class="search-btn mic-btn" title="Voice Search"><i class="fas fa-microphone"></i></button>
+        <div class="vr-divider"></div>
+        <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
+        <img class="profile-avatar" id="profileAvatar" src="https://i.pravatar.cc/100?img=21" alt="User Profile">
+        <div class="profile-dropdown" id="profileDropdown"
+          style="display:none; position:absolute; top:54px; right:10px; background:white; padding:8px 0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:1000; min-width:120px; font-family:Roboto,sans-serif;">
+          <div
+            style="padding:10px 16px; cursor:pointer; color:#3c4043; font-size:14px; display:flex; align-items:center; gap:8px;"
+            onclick="if(typeof logout === 'function') logout(); else { localStorage.removeItem('evcharger_user'); localStorage.removeItem('evcharger_token'); window.location.href='login.html'; }">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Suggestions Dropdown -->
+      <div id="searchSuggestions"
+        style="display:none; position:absolute; top:54px; left:0; right:48px; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:999; font-family:Roboto,sans-serif; max-height:300px; overflow-y:auto;">
+        <div class="suggestion-item"
+          style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; border-bottom:1px solid #f1f3f4;"
+          onclick="document.getElementById('searchInput').value='EV Charging Stations'; document.getElementById('searchBtn').click();">
+          <i class="fas fa-history" style="color:#5f6368;"></i> <span>EV Charging Stations</span>
+        </div>
+        <div class="suggestion-item"
+          style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; border-bottom:1px solid #f1f3f4;"
+          onclick="document.getElementById('searchInput').value='Hotels in Bengaluru'; document.getElementById('searchBtn').click();">
+          <i class="fas fa-search" style="color:#5f6368;"></i> <span>Hotels in Bengaluru</span>
+        </div>
+        <div class="suggestion-item"
+          style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; border-bottom:1px solid #f1f3f4;"
+          onclick="document.getElementById('searchInput').value='Restaurants nearby'; document.getElementById('searchBtn').click();">
+          <i class="fas fa-search" style="color:#5f6368;"></i> <span>Restaurants nearby</span>
+        </div>
+        <div class="suggestion-item"
+          style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px;"
+          onclick="document.getElementById('searchInput').value='Kempagowda International Airport'; document.getElementById('searchBtn').click();">
+          <i class="fas fa-search" style="color:#5f6368;"></i> <span>Kempagowda International Airport</span>
+        </div>
+      </div>
+      <div class="filter-chips">
+        <div class="chip active" id="nearMeChip" data-filter="near-me" data-category="ev">
+          <i class="fas fa-charging-station"></i> EV Stations
+        </div>
+        <div class="chip" data-filter="poi-hotel" data-category="hotel">
+          <i class="fas fa-hotel"></i> Hotels
+        </div>
+        <div class="chip" data-filter="poi-food" data-category="restaurant">
+          <i class="fas fa-utensils"></i> Food
+        </div>
+        <div class="chip" data-filter="poi-temple" data-category="place_of_worship">
+          <i class="fas fa-place-of-worship"></i> Temples
+        </div>
+        <div class="chip" data-filter="poi-bank" data-category="bank|atm">
+          <i class="fas fa-university"></i> Banks
+        </div>
+      </div>
+    </div>
+
+    <!-- Station count -->
+    <div id="stationCount" class="station-count-badge">
+      <i class="fas fa-charging-station"></i> <span id="stationCountNum">0</span> stations
+    </div>
+    <div id="nearestStationCard" class="nearest-station-card">
+      <div class="nearest-label">Nearest EV station</div>
+      <div id="nearestStationInfo" class="nearest-info">Detecting your location…</div>
+    </div>
+    <div id="resultsPanel" class="results-panel">
+      <div class="results-header">
+        <div>
+          <div class="results-title">Results <span class="results-info-icon" title="EV stations within 5 km"><i
+                class="fas fa-info-circle"></i></span></div>
+          <div class="results-subtitle">EV charging stations within 5 km</div>
+        </div>
+        <div class="results-header-actions">
+          <button id="voiceToggleBtn" class="results-action-icon" title="Toggle voice announcements"><i
+              class="fas fa-volume-up"></i></button>
+          <button id="shareResultsBtn" class="results-action-icon" title="Share"><i class="fas fa-share-alt"></i>
+            Share</button>
+          <button id="refreshResultsBtn" class="results-refresh-btn" title="Refresh results"><i
+              class="fas fa-sync-alt"></i></button>
+        </div>
+      </div>
+      <div id="resultsList" class="results-list"></div>
+    </div>
+  </div>
+
+  <!-- ============= DIRECTIONS MODE: Route Panel ============= -->
+  <div id="directionsUI" class="directions-ui hidden">
+    <!-- Top: Travel mode icons bar -->
+    <div class="dir-modes-bar">
+      <button class="dir-mode-icon active" data-mode="driving" title="Driving"><i class="fas fa-car"></i></button>
+      <button class="dir-mode-icon" data-mode="transit" title="Transit"><i class="fas fa-bus"></i></button>
+      <button class="dir-mode-icon" data-mode="train" title="Train"><i class="fas fa-train"></i></button>
+      <button class="dir-mode-icon" data-mode="walking" title="Walking"><i class="fas fa-walking"></i></button>
+      <button class="dir-mode-icon" data-mode="cycling" title="Cycling"><i class="fas fa-bicycle"></i></button>
+      <button class="dir-mode-icon" data-mode="flight" title="Flights"><i class="fas fa-plane"></i></button>
+      <button class="dir-close-btn" id="dirBackBtn"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Origin / Destination inputs -->
+    <div class="dir-inputs-section">
+      <div class="dir-dots-col">
+        <div class="dir-dot-origin"></div>
+        <div class="dir-dots-line-v"></div>
+        <div class="dir-dot-dest"></div>
+      </div>
+      <div class="dir-fields-col">
+        <div class="dir-input-wrapper">
+          <input type="text" class="dir-input-field" id="dirOriginInput"
+            placeholder="Choose starting point, or click on the map" value="Your location" />
+          <button class="dir-input-search" id="dirOriginSearchBtn"><i class="fas fa-search"></i></button>
+        </div>
+        <div class="dir-input-wrapper">
+          <input type="text" class="dir-input-field" id="dirDestInput" placeholder="Choose destination..." />
+          <button class="dir-input-search" id="dirDestSearchBtn"><i class="fas fa-search"></i></button>
+        </div>
+      </div>
+      <div class="dir-swap-col">
+        <button class="dir-swap-btn-v" id="reverseRouteBtn" title="Swap origin and destination"><i
+            class="fas fa-exchange-alt fa-rotate-90"></i></button>
+      </div>
+    </div>
+
+    <!-- Drag to reorder hint -->
+    <div class="dir-drag-hint">
+      <i class="fas fa-grip-lines"></i> <span>Drag to reorder</span>
+    </div>
+
+    <!-- Recent / Saved Locations -->
+    <div class="dir-recent-locations" id="dirRecentLocations">
+      <div class="dir-location-item dir-location-current" id="dirUseMyLocation">
+        <div class="dir-loc-icon"><i class="fas fa-crosshairs"></i></div>
+        <div class="dir-loc-info">
+          <div class="dir-loc-name">Your location</div>
+        </div>
+      </div>
+      <div class="dir-location-item" id="dirSavedWork">
+        <div class="dir-loc-icon"><i class="fas fa-briefcase"></i></div>
+        <div class="dir-loc-info">
+          <div class="dir-loc-name">Work</div>
+          <div class="dir-loc-sub" id="dirWorkAddress">Set your work address</div>
+        </div>
+        <span class="dir-loc-edit">Edit</span>
+      </div>
+      <div id="dirRecentsList">
+        <!-- Recent searches will be injected here -->
+      </div>
+    </div>
+
+    <!-- Traffic / Delays info -->
+    <div class="dir-traffic-info" id="dirTrafficInfo">
+      <div class="dir-traffic-header">
+        <i class="fas fa-exclamation-triangle" style="color: #f29900;"></i>
+        <strong>Delays</strong>
+      </div>
+      <div class="dir-traffic-desc" id="dirTrafficDesc">Checking traffic in this area...</div>
+    </div>
+
+    <!-- All modes comparison cards (shown after route is calculated) -->
+    <div class="travel-modes-compare hidden" id="travelModesCompare">
+      <div class="mode-card mode-active" data-mode="driving" id="modeDriving">
+        <div class="mode-card-icon"><i class="fas fa-car"></i></div>
+        <div class="mode-card-info">
+          <div class="mode-card-time" id="modeDrivingTime">Calculating...</div>
+          <div class="mode-card-dist" id="modeDrivingDist">--</div>
+        </div>
+        <div class="mode-card-via" id="modeDrivingVia">via road</div>
+      </div>
+      <div class="mode-card" data-mode="walking" id="modeWalking">
+        <div class="mode-card-icon"><i class="fas fa-walking"></i></div>
+        <div class="mode-card-info">
+          <div class="mode-card-time" id="modeWalkingTime">Calculating...</div>
+          <div class="mode-card-dist" id="modeWalkingDist">--</div>
+        </div>
+        <div class="mode-card-via" id="modeWalkingVia">on foot</div>
+      </div>
+      <div class="mode-card" data-mode="cycling" id="modeCycling">
+        <div class="mode-card-icon"><i class="fas fa-bicycle"></i></div>
+        <div class="mode-card-info">
+          <div class="mode-card-time" id="modeCyclingTime">Calculating...</div>
+          <div class="mode-card-dist" id="modeCyclingDist">--</div>
+        </div>
+        <div class="mode-card-via" id="modeCyclingVia">by bicycle</div>
+      </div>
+      <div class="mode-card" data-mode="transit" id="modeTransit">
+        <div class="mode-card-icon"><i class="fas fa-bus"></i></div>
+        <div class="mode-card-info">
+          <div class="mode-card-time" id="modeTransitTime">Calculating...</div>
+          <div class="mode-card-dist" id="modeTransitDist">--</div>
+        </div>
+        <div class="mode-card-via" id="modeTransitVia">by bus</div>
+      </div>
+    </div>
+
+    <!-- Route summary for active mode -->
+    <div class="route-summary hidden" id="routeSummary">
+      <div class="route-summary-header">
+        <div class="route-summary-stats">
+          <span class="route-eta" id="routeETA">--</span>
+          <span class="route-dist-time" id="routeDistTime">(--)</span>
+        </div>
+        <div class="route-summary-actions">
+          <button class="route-action-btn"><i class="fas fa-mobile-alt"></i></button>
+          <button class="route-action-btn" id="dirShareRouteBtn"><i class="fas fa-share-alt"></i></button>
+          <button class="route-action-btn"><i class="fas fa-print"></i></button>
+        </div>
+      </div>
+      <div class="route-via" id="routeVia">Calculating route...</div>
+      <div class="route-traffic-desc">Fastest route, the usual traffic</div>
+    </div>
+
+    <!-- START in-app navigation -->
+    <div class="start-nav-container hidden" id="startNavContainer">
+      <button class="start-nav-btn" id="startNavInApp">
+        <i class="fas fa-navigation"></i> Start Navigation
+      </button>
+    </div>
+
+    <!-- Turn-by-turn steps -->
+    <div class="dir-steps-container" id="dirSteps">
+      <!-- Steps will be injected here -->
+    </div>
+  </div>
+
+  <!-- ============= NAVIGATION MODE: Live navigation bar ============= -->
+  <div id="navUI" class="nav-ui hidden">
+    <!-- Travel Mode Options at Top -->
+    <div class="nav-modes-bar" id="navModesBar">
+      <button class="nav-mode-btn active" data-mode="driving" id="navModeBtn-driving">
+        <i class="fas fa-car"></i>
+        <div class="mode-time" id="navModeTime-driving">--</div>
+      </button>
+      <button class="nav-mode-btn" data-mode="walking" id="navModeBtn-walking">
+        <i class="fas fa-walking"></i>
+        <div class="mode-time" id="navModeTime-walking">--</div>
+      </button>
+      <button class="nav-mode-btn" data-mode="cycling" id="navModeBtn-cycling">
+        <i class="fas fa-bicycle"></i>
+        <div class="mode-time" id="navModeTime-cycling">--</div>
+      </button>
+      <button class="nav-mode-btn" data-mode="transit" id="navModeBtn-transit">
+        <i class="fas fa-bus"></i>
+        <div class="mode-time" id="navModeTime-transit">--</div>
+      </button>
+    </div>
+
+    <div class="nav-top-bar">
+      <div class="nav-maneuver-icon" id="navIcon">
+        <i class="fas fa-arrow-up"></i>
+      </div>
+      <div class="nav-instruction">
+        <div class="nav-distance-next" id="navDistNext">--</div>
+        <div class="nav-street" id="navStreet">Starting navigation...</div>
+        <div class="nav-next-hint" id="navNextHint"></div>
+      </div>
+      <button class="nav-close-btn" id="navCloseBtn"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="nav-bottom-bar">
+      <div class="nav-eta-info">
+        <span class="nav-eta" id="navETA">--</span>
+        <span class="nav-separator">·</span>
+        <span class="nav-remaining-dist" id="navRemDist">--</span>
+        <span class="nav-separator">·</span>
+        <span class="nav-remaining-time" id="navRemTime">--</span>
+      </div>
+      <button class="nav-stop-btn" id="navStopBtn">
+        <i class="fas fa-times-circle"></i> Exit
+      </button>
+    </div>
+  </div>
+
+  <!-- ============= SIDE PANEL: Station Details ============= -->
+  <div id="sidePanel" class="side-panel">
+    <div class="panel-gallery" id="panelGalleryContainer">
+      <button id="closePanelBtn" class="close-panel-btn"><i class="fas fa-times"></i></button>
+
+      <!-- Normal Images -->
+      <div class="gallery-container" id="galleryContainer">
+        <div class="gallery-slides" id="gallerySlides"></div>
+        <button class="gallery-nav gallery-prev" id="galleryPrev"><i class="fas fa-chevron-left"></i></button>
+        <button class="gallery-nav gallery-next" id="galleryNext"><i class="fas fa-chevron-right"></i></button>
+        <div class="gallery-dots" id="galleryDots"></div>
+        <div class="gallery-count" id="galleryCount">1 / 3</div>
+        <button class="btn-360" id="btn360"><i class="fas fa-street-view"></i> 360° View</button>
+      </div>
+
+      <!-- 360 Street View Embed -->
+      <div class="street-view-container hidden" id="streetViewContainer">
+        <iframe id="streetViewIframe" width="100%" height="100%" frameborder="0" style="border:0;"
+          allowfullscreen></iframe>
+        <div class="street-view-overlay">
+          <button class="btn-360-close" id="btn360Close"><i class="fas fa-image"></i> Photos</button>
+          <a id="btn360Full" target="_blank" class="btn-360-full"><i class="fas fa-external-link-alt"></i> Open Full
+            View</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-content">
+      <h2 id="spName" class="panel-title">EV Charging Station</h2>
+      <div id="spOperator" class="panel-operator"></div>
+      <div id="spCompany" class="panel-company"></div>
+      <div class="panel-subtitle">
+        <span id="spStatusBadge" class="status-badge available">Available</span>
+        <span class="sub-sep">·</span>
+        <span id="spTypeTxt">EV Charging Station</span>
+      </div>
+
+      <!-- Distance Highlight Card -->
+      <div class="distance-card" id="distanceCard" style="display:none;">
+        <div class="dist-card-left">
+          <i class="fas fa-route"></i>
+        </div>
+        <div class="dist-card-center">
+          <div class="dist-card-value" id="spDistValue">--</div>
+          <div class="dist-card-label" id="spDistLabel">away from you</div>
+        </div>
+        <div class="dist-card-right">
+          <div class="dist-card-time" id="spDistTime">~-- min</div>
+          <div class="dist-card-drive">drive</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button class="action-btn action-directions" id="directionsBtn">
+          <div class="icon-circle ic-directions"><i class="fas fa-directions"></i></div>
+          Directions
+        </button>
+        <button class="action-btn action-start" id="startNavBtn">
+          <div class="icon-circle ic-start"><i class="fas fa-navigation"></i></div>
+          Start
+        </button>
+        <button class="action-btn" id="saveStationBtn">
+          <div class="icon-circle ic-save"><i class="fas fa-bookmark"></i></div>
+          Save
+        </button>
+        <button class="action-btn" id="shareLocationBtn">
+          <div class="icon-circle ic-share"><i class="fas fa-share"></i></div>
+          Share
+        </button>
+        <button class="action-btn" id="downloadDataBtn" style="display:none; color: #1a73e8;">
+          <div class="icon-circle ic-download" style="background:#e8f0fe;"><i class="fas fa-download"></i></div>
+          Data
+        </button>
+      </div>
+
+      <!-- Address -->
+      <div class="info-row">
+        <i class="fas fa-map-marker-alt"></i>
+        <div class="info-text">
+          <div id="spAddress" class="info-main">Loading...</div>
+          <div id="spAddressLine2" class="info-sub"></div>
+          <div id="spCityState" class="info-sub"></div>
+          <div id="spPostcode" class="info-sub"></div>
+        </div>
+      </div>
+
+      <!-- Hours -->
+      <div class="info-row">
+        <i class="fas fa-clock"></i>
+        <div class="info-text">
+          <div id="spHours" class="info-main">Open 24 hours</div>
+          <div id="spAccessInfo" class="info-sub"></div>
+        </div>
+      </div>
+
+      <!-- Fuel Details (Dynamic Injection) -->
+      <div id="spFuelDetails" style="display:none; margin:16px 0;"></div>
+
+      <!-- Connectors -->
+      <div class="info-row">
+        <i class="fas fa-charging-station"></i>
+        <div class="info-text">
+          <div class="info-main"><strong>Connectors</strong></div>
+          <div id="spConnectors" class="connector-list"></div>
+        </div>
+      </div>
+
+      <!-- Coordinates -->
+      <div class="info-row">
+        <i class="fas fa-crosshairs"></i>
+        <div class="info-text">
+          <div class="info-sub" id="spCoords">--</div>
+        </div>
+      </div>
+
+      <!-- Website -->
+      <div class="info-row" id="spWebsiteRow" style="display:none;">
+        <i class="fas fa-globe"></i>
+        <div class="info-text">
+          <a id="spWebsite" href="#" target="_blank" class="info-link">Website</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= BOTTOM LEFT CONTROLS ============= -->
+  <div class="google-layer-switcher" id="layerSwitcher">
+    <div class="layer-main-btn" id="primaryLayerToggle" data-layer="satellite">
+      <div class="layer-thumb satellite-thumb"></div>
+      <div class="layer-label">Satellite</div>
+    </div>
+    <div class="layer-options-panel">
+      <div class="layer-option-item" data-layer="traffic">
+        <div class="option-icon traffic-icon"></div>
+        <span>Traffic</span>
+      </div>
+      <div class="layer-option-item" data-layer="transit">
+        <div class="option-icon transit-icon"></div>
+        <span>Transit</span>
+      </div>
+      <div class="layer-option-item" data-layer="biking">
+        <div class="option-icon biking-icon"></div>
+        <span>Biking</span>
+      </div>
+      <div class="layer-option-item" data-layer="terrain">
+        <div class="option-icon terrain-icon"></div>
+        <span>Terrain</span>
+      </div>
+      <div class="layer-option-item" data-layer="more">
+        <div class="option-icon more-icon"><i class="fas fa-ellipsis-h"></i></div>
+        <span>More</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= 360° STREET VIEW MODAL ============= -->
+  <div id="streetViewModal" class="sv-modal" style="display:none">
+    <div class="sv-header">
+      <div class="sv-title-row">
+        <i class="fas fa-street-view sv-icon"></i>
+        <div>
+          <div class="sv-title" id="svTitle">360° Street View</div>
+          <div class="sv-subtitle" id="svSubtitle">Loading location…</div>
+        </div>
+      </div>
+      <button class="sv-close" id="svCloseBtn" title="Close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sv-body">
+      <div class="sv-panorama" id="svPanorama">
+        <div class="sv-loading" id="svLoading">
+          <div class="spinner" style="width:36px;height:36px;border-width:4px;margin:0 auto 12px"></div>
+          <div>Loading 360° view…</div>
+        </div>
+        <img id="svImage" class="sv-image" alt="360° Street View" style="display:none" />
+        <div class="sv-no-coverage" id="svNoCoverage" style="display:none">
+          <i class="fas fa-map-marked-alt" style="font-size:48px;margin-bottom:12px;opacity:.5"></i>
+          <div style="font-size:16px;font-weight:600;margin-bottom:4px">Street View not available</div>
+          <div style="font-size:13px;opacity:.7">No imagery coverage at this location</div>
+        </div>
+      </div>
+      <div class="sv-controls">
+        <div class="sv-compass" id="svCompass">
+          <div class="sv-compass-needle" id="svNeedle"></div>
+          <span class="sv-compass-label">N</span>
+        </div>
+        <div class="sv-heading-btns">
+          <button class="sv-btn" id="svRotateLeft" title="Rotate Left"><i class="fas fa-undo"></i></button>
+          <span class="sv-heading-text" id="svHeadingText">0°</span>
+          <button class="sv-btn" id="svRotateRight" title="Rotate Right"><i class="fas fa-redo"></i></button>
+        </div>
+        <div class="sv-fov-btns">
+          <button class="sv-btn" id="svZoomIn" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+          <button class="sv-btn" id="svZoomOut" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+        </div>
+        <button class="sv-btn sv-btn-open-maps" id="svOpenMaps" title="Open in Google Maps">
+          <i class="fas fa-external-link-alt"></i> Open Maps
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= BOTTOM RIGHT CONTROLS ============= -->
+  <div class="bottom-right-controls" id="bottomControls">
+    <button class="fab fab-location" id="currentLocationBtn" title="Your Location">
+      <i class="fas fa-crosshairs"></i>
+    </button>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomInBtn" title="Zoom In"><i class="fas fa-plus"></i></button>
+      <button class="zoom-btn" id="zoomOutBtn" title="Zoom Out"><i class="fas fa-minus"></i></button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+  <script src="petrol_data.js?v=2.0"></script>
+  <script src="hotel_data.js?v=1.0"></script>
+  <script src="auth.js?v=2.0"></script>
+  <script src="script.js?v=2.0"></script>
+</body>
+
+</html>

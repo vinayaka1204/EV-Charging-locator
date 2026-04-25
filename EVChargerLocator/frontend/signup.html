@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — EV Charger Locator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://accounts.google.com/gss/style.css">
+</head>
+<body class="auth-page">
+
+  <!-- Background Video Animation -->
+  <div class="auth-bg">
+    <video autoplay loop muted playsinline class="bg-video">
+      <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-on-a-highway-during-the-night-41036-large.mp4" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="auth-container">
+    <!-- Left Section - Branding -->
+    <div class="auth-left">
+      <div class="auth-brand">
+        <div class="brand-icon"><i class="fas fa-charging-station"></i></div>
+        <h1>EV Charger</h1>
+        <p>Locator</p>
+      </div>
+      <div class="auth-features">
+        <div class="feature-item">
+          <i class="fas fa-map-location-dot"></i>
+          <span>Find nearby charging stations</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-directions"></i>
+          <span>Real-time navigation & directions</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-bolt"></i>
+          <span>Compare charging speeds</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-history"></i>
+          <span>Save your favorite stations</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Section - Form -->
+    <div class="auth-right">
+      <div class="auth-form-wrapper">
+        <div class="auth-form-header">
+          <h2>Create Account</h2>
+          <p>Join thousands of EV drivers</p>
+        </div>
+
+        <!-- Signup Form -->
+        <form id="signupForm" class="auth-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="firstName">First Name</label>
+              <input type="text" id="firstName" name="firstName" placeholder="John" required>
+              <span class="form-error" id="firstNameError"></span>
+            </div>
+            <div class="form-group">
+              <label for="lastName">Last Name</label>
+              <input type="text" id="lastName" name="lastName" placeholder="Doe" required>
+              <span class="form-error" id="lastNameError"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signupEmail">Email Address</label>
+            <input type="email" id="signupEmail" name="email" placeholder="you@example.com" required>
+            <span class="form-error" id="signupEmailError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+            <span class="form-error" id="phoneError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="signupPassword" name="password" placeholder="••••••••" required>
+              <button type="button" class="toggle-password" id="toggleSignupPassword">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div class="password-strength" id="passwordStrength"></div>
+            <span class="form-error" id="signupPasswordError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" required>
+              <button type="button" class="toggle-password" id="toggleConfirmPassword">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <span class="form-error" id="confirmPasswordError"></span>
+          </div>
+
+          <div class="form-group">
+            <input type="checkbox" id="agree" name="agree" required>
+            <label for="agree" style="margin: 0; display: inline;">
+              I agree to the <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a>
+            </label>
+            <span class="form-error" id="agreeError"></span>
+          </div>
+
+          <button type="submit" class="auth-btn auth-btn-primary">
+            <span>Create Account</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span>Or sign up with</span>
+        </div>
+
+        <!-- Google OAuth -->
+        <button type="button" class="auth-btn auth-btn-oauth" id="googleSignUpBtn">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3C/svg%3E" alt="Google">
+          Sign up with Google
+        </button>
+
+        <!-- Login Link -->
+        <div class="auth-footer">
+          <p>Already have an account? <a href="login.html">Sign in</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js?v=2.0"></script>
+</body>
+</html>

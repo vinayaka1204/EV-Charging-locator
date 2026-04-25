@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — EV Charger Locator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="profile-page">
+
+  <!-- Navigation -->
+  <nav class="profile-nav">
+    <div class="nav-container">
+      <button id="backBtn" class="nav-back-btn">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1 class="nav-title">Profile</h1>
+      <button id="logoutBtn" class="nav-logout-btn">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Profile Container -->
+  <div class="profile-container">
+    <!-- Header Section -->
+    <div class="profile-header">
+      <div class="profile-avatar-wrapper">
+        <img id="profileAvatar" class="profile-avatar" src="" alt="Profile">
+        <div class="avatar-upload-overlay">
+          <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+          <button type="button" id="uploadAvatarBtn" class="avatar-upload-trigger">
+            <i class="fas fa-camera"></i>
+          </button>
+        </div>
+      </div>
+      <div class="profile-header-info">
+        <h2 id="profileName" class="profile-name">Loading...</h2>
+        <p id="profileEmail" class="profile-email">Loading...</p>
+        <div id="googleBadge" class="google-badge" style="display: none;">
+          <i class="fab fa-google"></i> Google Account
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="profile-content">
+      <!-- Tabs -->
+      <div class="profile-tabs">
+        <button class="profile-tab active" data-tab="personal">
+          <i class="fas fa-user"></i>
+          Personal Info
+        </button>
+        <button class="profile-tab" data-tab="vehicle">
+          <i class="fas fa-car"></i>
+          Vehicles
+        </button>
+        <button class="profile-tab" data-tab="preferences">
+          <i class="fas fa-sliders-h"></i>
+          Preferences
+        </button>
+        <button class="profile-tab" data-tab="history">
+          <i class="fas fa-history"></i>
+          History
+        </button>
+      </div>
+
+      <!-- Tab Contents -->
+      
+      <!-- Personal Info Tab -->
+      <div class="profile-tab-content active" id="personalTab">
+        <form id="personalForm" class="profile-form">
+          <div class="form-section">
+            <h3>Personal Information</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="firstName">First Name</label>
+                <input type="text" id="firstName" name="firstName" placeholder="John">
+              </div>
+              <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <input type="text" id="lastName" name="lastName" placeholder="Doe">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" placeholder="john@example.com" readonly>
+              <small>Your primary email</small>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+            </div>
+
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" name="location" placeholder="City, State">
+            </div>
+
+            <div class="form-group">
+              <label for="bio">About You</label>
+              <textarea id="bio" name="bio" placeholder="Tell us about yourself..." rows="4"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Save Changes
+            </button>
+          </div>
+        </form>
+
+        <!-- Security Section -->
+        <div class="form-section">
+          <h3>Security</h3>
+          <div class="security-row">
+            <div class="security-info">
+              <strong>Password</strong>
+              <p>Update your password regularly</p>
+            </div>
+            <button type="button" id="changePasswordBtn" class="btn btn-outline">
+              <i class="fas fa-key"></i> Change Password
+            </button>
+          </div>
+          <div class="security-row">
+            <div class="security-info">
+              <strong>Two-Factor Authentication</strong>
+              <p>Add extra security to your account</p>
+            </div>
+            <button type="button" class="btn btn-outline" disabled>
+              <i class="fas fa-shield-alt"></i> Enable
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vehicles Tab -->
+      <div class="profile-tab-content" id="vehicleTab">
+        <div class="form-section">
+          <div class="section-header">
+            <h3>My Vehicles</h3>
+            <button type="button" id="addVehicleBtn" class="btn btn-small btn-primary">
+              <i class="fas fa-plus"></i> Add Vehicle
+            </button>
+          </div>
+          <div id="vehiclesList" class="vehicles-list">
+            <p class="empty-state">No vehicles added yet</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preferences Tab -->
+      <div class="profile-tab-content" id="preferencesTab">
+        <form id="preferencesForm" class="profile-form">
+          <div class="form-section">
+            <h3>App Preferences</h3>
+            
+            <div class="preference-item">
+              <div class="preference-info">
+                <label for="preferredCharger">Preferred Charger Type</label>
+                <small>Used for recommendations</small>
+              </div>
+              <select id="preferredCharger" name="preferredCharger">
+                <option value="">No preference</option>
+                <option value="fast">Fast Charging (DC)</option>
+                <option value="level2">Level 2 Charging</option>
+                <option value="any">Any type</option>
+              </select>
+            </div>
+
+            <div class="preference-item">
+              <div class="preference-info">
+                <label for="notificationDistance">Notification Distance</label>
+                <small>Alert within (km)</small>
+              </div>
+              <select id="notificationDistance" name="notificationDistance">
+                <option value="5">5 km</option>
+                <option value="10" selected>10 km</option>
+                <option value="20">20 km</option>
+                <option value="50">50 km</option>
+              </select>
+            </div>
+
+            <div class="preference-item">
+              <div class="preference-toggle">
+                <input type="checkbox" id="emailNotifications" name="emailNotifications" checked>
+                <label for="emailNotifications">Email Notifications</label>
+              </div>
+              <small>Receive updates about new stations</small>
+            </div>
+
+            <div class="preference-item">
+              <div class="preference-toggle">
+                <input type="checkbox" id="pushNotifications" name="pushNotifications" checked>
+                <label for="pushNotifications">Push Notifications</label>
+              </div>
+              <small>Real-time alerts and updates</small>
+            </div>
+
+            <div class="preference-item">
+              <div class="preference-toggle">
+                <input type="checkbox" id="locationTracking" name="locationTracking" checked>
+                <label for="locationTracking">Location Tracking</label>
+              </div>
+              <small>Allow location access for better recommendations</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Save Preferences
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- History Tab -->
+      <div class="profile-tab-content" id="historyTab">
+        <div class="form-section">
+          <h3>Recent Visits</h3>
+          <div id="historyList" class="history-list">
+            <p class="empty-state">No history yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="profile-danger-zone">
+      <h3>Danger Zone</h3>
+      <button type="button" id="deleteAccountBtn" class="btn btn-danger">
+        <i class="fas fa-trash"></i> Delete Account
+      </button>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="passwordModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Change Password</h2>
+        <button class="modal-close" id="closePasswordModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="passwordForm">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmNewPassword">Confirm Password</label>
+          <input type="password" id="confirmNewPassword" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelPasswordBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Vehicle Modal -->
+  <div id="vehicleModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Vehicle</h2>
+        <button class="modal-close" id="closeVehicleModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="vehicleForm">
+        <div class="form-group">
+          <label for="vehicleMake">Make</label>
+          <input type="text" id="vehicleMake" placeholder="Tesla" required>
+        </div>
+        <div class="form-group">
+          <label for="vehicleModel">Model</label>
+          <input type="text" id="vehicleModel" placeholder="Model 3" required>
+        </div>
+        <div class="form-group">
+          <label for="vehicleYear">Year</label>
+          <input type="number" id="vehicleYear" placeholder="2023" required>
+        </div>
+        <div class="form-group">
+          <label for="batteryCapacity">Battery Capacity (kWh)</label>
+          <input type="number" id="batteryCapacity" placeholder="75" step="0.1">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="cancelVehicleBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Vehicle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>
