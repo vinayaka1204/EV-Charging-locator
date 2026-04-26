@@ -1,7 +1,7 @@
 console.log('[EV App] Script Version 2.0 Loaded');
 
 // ============= GLOBAL ERROR HANDLER =============
-window.onerror = function(msg, url, lineNo, columnNo, error) {
+window.onerror = function (msg, url, lineNo, columnNo, error) {
   console.error('Error: ' + msg + '\nScript: ' + url + '\nLine: ' + lineNo);
   return false;
 };
@@ -29,8 +29,14 @@ let allModeRoutes = {}; // { driving: {...}, walking: {...}, cycling: {...} }
 let activeMode = 'driving';
 
 // APIs
-const OCM_API = 'https://api.openchargemap.io/v3/poi/';
+const OCM_API = "https://api.openchargemap.io/v3/poi/";
+//const API = "https://bg9r4edt9a.execute-api.us-east-1.amazonaws.com/getCharger";
 const API = "https://bg9r4edt9a.execute-api.us-east-1.amazonaws.com/getCharger";
+
+fetch(`${API}/getCharger`)
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
 
 // Brand colors for markers
 const PETROL_COMPANY_COLORS = {
@@ -119,7 +125,7 @@ function renderStarRating(rating) {
 function getAvailabilityStatus(availability) {
   if (!availability) return { text: 'Open 24 hours', color: '#188038' };
   if (availability === '24/7') return { text: 'Open 24 hours', color: '#188038' };
-  
+
   // Parse hours like "9:00-18:00"
   const now = new Date();
   const currentHour = now.getHours();
@@ -177,7 +183,7 @@ let searchInput, sidePanel, loadingOverlay, loadingText, normalUI, directionsUI,
 // ============= INITIALIZATION =============
 window.onload = function () {
   console.log('[EV App] window.onload started');
-  
+
   // 1. Initialize critical DOM references immediately
   searchInput = $('searchInput');
   sidePanel = $('sidePanel');
@@ -192,7 +198,7 @@ window.onload = function () {
   console.log('[EV App] Initializing Map...');
   try {
     if (typeof L === 'undefined') throw new Error('Leaflet library not loaded!');
-    
+
     // LEAFLET INITIALIZATION (Matched to user's requested style)
     map = L.map('map').setView([12.9716, 77.5946], 13);
 
@@ -208,7 +214,7 @@ window.onload = function () {
       satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {}),
       terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {})
     };
-    
+
     markersLayer = L.layerGroup().addTo(map);
     window.mainTileLayer = window.baseTileLayers.map;
 
@@ -293,32 +299,32 @@ window.onload = function () {
     if (e.key === 'Enter') {
       const q = $('dirDestInput').value.trim();
       if (!q) return;
-      
+
       // Clear previous marker if exists
       if (window.customDestMarker) map.removeLayer(window.customDestMarker);
-      
+
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
         const results = await res.json();
         if (results.length) {
           const lat = parseFloat(results[0].lat);
           const lon = parseFloat(results[0].lon);
-          
+
           // Create dummy charger object for the searched location
           const dummyTarget = {
             AddressInfo: { Title: results[0].name || q, Latitude: lat, Longitude: lon },
             Status: { IsOp: true }, Operator: { Title: '' }, Connections: [], _src: 'search'
           };
-          
+
           // Show marker
           window.customDestMarker = L.marker([lat, lon]).addTo(map)
             .bindPopup(`<strong>${results[0].name || q}</strong>`).openPopup();
           map.setView([lat, lon], 15);
-          
+
           // Calculate directions to this location
           enterDirectionsMode(dummyTarget);
         }
-      } catch(e) { console.error('Search failed', e); }
+      } catch (e) { console.error('Search failed', e); }
     }
   });
 
@@ -332,28 +338,28 @@ window.onload = function () {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
         const data = await res.json();
         const title = data.name || data.display_name.split(',')[0] || 'Selected Place';
-        
+
         if (window.customDestMarker) map.removeLayer(window.customDestMarker);
         window.customDestMarker = L.marker([lat, lon]).addTo(map)
           .bindPopup(`<strong>${title}</strong>`).openPopup();
-          
+
         const dummyTarget = {
           AddressInfo: { Title: title, Latitude: lat, Longitude: lon },
           Status: { IsOp: true }, Operator: { Title: '' }, Connections: [], _src: 'map_click'
         };
         enterDirectionsMode(dummyTarget);
-      } catch (err) {}
+      } catch (err) { }
     } else if (currentMode === 'normal') {
       // Close side panel if clicking empty space, but let's try to get place info first
       const lat = e.latlng.lat;
       const lon = e.latlng.lng;
-      
+
       try {
         showLoading('Identifying place...');
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
         const data = await res.json();
         hideLoading();
-        
+
         const title = data.name || data.address?.building || data.address?.amenity || data.address?.shop || 'Selected Location';
         if (!title || title === 'Selected Location') {
           // If it's just an empty road/space, just close panel
@@ -367,11 +373,11 @@ window.onload = function () {
 
         // Show place info in side panel
         const dummyTarget = {
-          AddressInfo: { 
-            Title: title, 
+          AddressInfo: {
+            Title: title,
             AddressLine1: data.display_name.split(',').slice(0, 2).join(','),
-            Latitude: lat, 
-            Longitude: lon 
+            Latitude: lat,
+            Longitude: lon
           },
           Status: { IsOp: true, Title: 'Location' },
           Operator: { Title: data.address?.tourism || data.address?.leisure || 'Place of Interest' },
@@ -435,7 +441,7 @@ window.onload = function () {
     const stationNames = chargersData.slice(0, 5).map(c => c.AddressInfo.Title).join(', ');
     const shareText = `Found ${chargersData.length} EV charging stations nearby: ${stationNames}. Check them out!`;
     if (navigator.share) {
-      navigator.share({ title: 'EV Charging Stations Nearby', text: shareText, url: window.location.href }).catch(() => {});
+      navigator.share({ title: 'EV Charging Stations Nearby', text: shareText, url: window.location.href }).catch(() => { });
     } else {
       navigator.clipboard.writeText(shareText).then(() => {
         alert('Station list copied to clipboard!');
@@ -495,7 +501,7 @@ window.onload = function () {
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
       const filter = chip.getAttribute('data-filter');
-      
+
       // POI logic (Temples, Food, Banks, Hotels)
       if (filter && filter.startsWith('poi-')) {
         // Toggle off other POI chips
@@ -504,7 +510,7 @@ window.onload = function () {
             c.classList.remove('active');
           }
         });
-        
+
         chip.classList.toggle('active');
         if (chip.classList.contains('active')) {
           fetchAndShowPOIs(chip.textContent.trim());
@@ -513,7 +519,7 @@ window.onload = function () {
         }
         return;
       }
-      
+
       if (filter === 'near-me') {
         showLoading('Finding chargers near you...');
         detectUserLocation(true);
@@ -566,24 +572,24 @@ window.onload = function () {
       const a = selectedCharger.AddressInfo;
       const container = $('streetViewContainer');
       const gallery = $('galleryContainer');
-      
+
       // Show inline in side panel
       gallery.style.display = 'none';
       container.classList.remove('hidden');
-      
+
       const iframe = $('streetViewIframe');
       if (iframe) {
         const heading = selectedCharger.StreetViewHeading || 180;
         iframe.src = buildStreetViewUrl(a.Latitude, a.Longitude, heading, 90);
       }
-      
+
       const fullLink = $('btn360Full');
       if (fullLink) {
         fullLink.href = `https://www.google.com/maps/@${a.Latitude},${a.Longitude},3a,75y,${selectedCharger.StreetViewHeading || 180}h,90t/data=!3m6!1e1!3m4!1s!2e0!7i13312!8i6656`;
       }
     }
   });
-  
+
   $('btn360Close').addEventListener('click', () => {
     const container = $('streetViewContainer');
     const gallery = $('galleryContainer');
@@ -598,24 +604,24 @@ window.onload = function () {
     const center = map.getCenter();
     const chip = Array.from(chips).find(c => c.textContent.trim() === categoryLabel);
     const categoryType = chip ? chip.getAttribute('data-category') : categoryLabel.toLowerCase();
-    
+
     // Better query: "restaurant" or "hotel" or "place_of_worship" within Bengaluru
     const q = encodeURIComponent(categoryLabel);
     showLoading(`Finding ${categoryLabel} nearby...`);
-    
+
     try {
       // Use Nominatim search with viewbox to bias results to the current map area
       const bounds = map.getBounds();
       const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=20&viewbox=${viewbox}&bounded=1`;
-      
+
       const res = await fetch(url);
       const data = await res.json();
       hideLoading();
-      
+
       if (window.poiMarkersLayer) map.removeLayer(window.poiMarkersLayer);
       window.poiMarkersLayer = L.layerGroup().addTo(map);
-      
+
       if (data.length === 0) {
         // Fallback: search without bounding box but near center
         const fallbackRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=15&lat=${center.lat}&lon=${center.lng}`);
@@ -629,14 +635,14 @@ window.onload = function () {
         'Temples': { color: '#ff9800', icon: 'fa-place-of-worship' },
         'Banks': { color: '#3f51b5', icon: 'fa-university' }
       };
-      
+
       const config = iconMap[categoryLabel] || { color: '#e91e63', icon: 'fa-map-marker-alt' };
 
       data.forEach(item => {
         const lat = parseFloat(item.lat);
         const lon = parseFloat(item.lon);
         const title = item.name || item.display_name.split(',')[0];
-        
+
         const poiIcon = L.divIcon({
           className: 'poi-marker-container',
           html: `<div class="poi-marker-inner" style="background:${config.color};">
@@ -644,12 +650,12 @@ window.onload = function () {
                  </div>`,
           iconSize: [30, 30], iconAnchor: [15, 15]
         });
-        
+
         L.marker([lat, lon], { icon: poiIcon }).addTo(window.poiMarkersLayer)
           .bindPopup(`
             <div style="font-family:Roboto,sans-serif; padding:5px;">
               <div style="font-weight:700; font-size:14px; color:${config.color};">${title}</div>
-              <div style="font-size:11px; color:#5f6368; margin-top:4px;">${item.display_name.split(',').slice(1,4).join(',')}</div>
+              <div style="font-size:11px; color:#5f6368; margin-top:4px;">${item.display_name.split(',').slice(1, 4).join(',')}</div>
               <button onclick="window.setDestinationFromPOI(${lat}, ${lon}, '${title.replace(/'/g, "\\'")}')" 
                 style="margin-top:10px; width:100%; padding:6px; background:${config.color}; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">
                 <i class="fas fa-directions"></i> Get Directions
@@ -657,7 +663,7 @@ window.onload = function () {
             </div>
           `);
       });
-      
+
       if (data.length > 0) {
         // Adjust zoom slightly if markers are too far
         const markerBounds = L.latLngBounds(data.map(d => [d.lat, d.lon]));
@@ -693,7 +699,7 @@ window.onload = function () {
     const toggleBtn = $('primaryLayerToggle');
     const thumb = toggleBtn.querySelector('.layer-thumb');
     const label = toggleBtn.querySelector('.layer-label');
-    
+
     toggleBtn.dataset.layer = nextLayer;
     thumb.className = `layer-thumb ${nextLayer}-thumb`;
     label.textContent = nextLayer === 'satellite' ? 'Satellite' : 'Map';
@@ -813,7 +819,7 @@ function placeUserMarker() {
     html: '<div class="user-pulse"></div><div class="user-dot" title="Drag to adjust your exact location"></div>',
     iconSize: [40, 40], iconAnchor: [20, 20]
   });
-  
+
   function getPopupContent(lat, lng) {
     return `<div style="font-family:Roboto,sans-serif;min-width:180px;text-align:center;">
       <strong style="font-size:14px;color:#202124;">Placed Location</strong><br>
@@ -824,19 +830,19 @@ function placeUserMarker() {
     </div>`;
   }
 
-  userMarker = L.marker(userLocation, { 
-    icon, 
+  userMarker = L.marker(userLocation, {
+    icon,
     zIndexOffset: 1000,
     draggable: true // Allow user to pinpoint exact location
   }).addTo(map).bindPopup(getPopupContent(userLocation[0], userLocation[1]));
-  
+
   // When user finishes dragging the blue dot
   userMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();
     userLocation = [pos.lat, pos.lng];
-    
+
     userMarker.setPopupContent(getPopupContent(userLocation[0], userLocation[1]));
-    
+
     // Show loading state and fetch new data based on manual position
     showLoading('Updating your adjusted location...');
     map.setView(userLocation);
@@ -853,7 +859,7 @@ function placeCarMarker(lat, lng, heading = 0) {
     iconAnchor: [20, 20],
     className: ''
   });
-  
+
   carMarker = L.marker([lat, lng], { icon, zIndexOffset: 500 }).addTo(map);
 }
 
@@ -864,26 +870,23 @@ let svCurrentLat = 0;
 let svCurrentLng = 0;
 
 function buildStreetViewUrl(lat, lng, heading, fov) {
-  // Use a more modern embed format that handles POV better
-  // cbll: location, cbp: 12, heading, pitch, zoom, 2 (auto-orient)
-  const pitch = 0; 
-  const zoom = 1;
-  return `https://maps.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,${heading},${pitch},${zoom},0&source=browser&output=embed&hl=en`;
+  const pitch = -5; // slight downward pitch looks better
+  return `https://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}&cbp=11,${heading},0,0,0&output=svembed`;
 }
 
-window.openGlobalStreetView = function(lat, lng, title) {
+window.openGlobalStreetView = function (lat, lng, title) {
   const modal = $('streetViewModal');
   const sidePanelEmbed = $('streetViewContainer');
-  
+
   svCurrentLat = lat;
   svCurrentLng = lng;
-  
+
   // Get heading from station data
   let initialHeading = 180;
   if (selectedCharger && selectedCharger.AddressInfo.Latitude === lat && selectedCharger.AddressInfo.Longitude === lng) {
     initialHeading = selectedCharger.StreetViewHeading || 180;
   }
-  
+
   svHeading = initialHeading;
   svFov = 90;
 
@@ -894,7 +897,7 @@ window.openGlobalStreetView = function(lat, lng, title) {
     $('svLoading').style.display = 'flex';
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('sv-open'), 10);
-    
+
     const pano = $('svPanorama');
     let iframe = pano.querySelector('iframe');
     if (!iframe) {
@@ -982,18 +985,18 @@ async function fetchChargersAtLocation(lat, lng, radiusKm = 30) {
   console.log('[EV App] Fetching data for:', lat, lng);
   // Start with local curated data
   chargersData = globalLocalStations ? JSON.parse(JSON.stringify(globalLocalStations)) : [];
-  
+
   try {
     if (typeof loadingText !== 'undefined' && loadingText) {
       loadingText.textContent = 'Updating Petrol Bunks & EV Stations...';
     }
-    
+
     // Attempt parallel fetching
     await Promise.allSettled([
       fetchFromOverpass(lat, lng, radiusKm),
       fetchFromOpenChargeMap(lat, lng, radiusKm)
     ]);
-    
+
     console.log(`[EV App] Fetch complete. Total stations: ${chargersData.length}`);
     updateDistances();
     chargersData.sort((a, b) => (a._distance || 999) - (b._distance || 999));
@@ -1011,10 +1014,10 @@ async function fetchFromOverpass(lat, lng, radiusKm) {
     // Get current map bounds for absolute accuracy
     const bounds = map.getBounds();
     const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-    
+
     // For fuel stations, use Bengaluru city bounds to get all petrol bunks
     const bengaluruBbox = '12.8,77.4,13.1,77.8';
-    
+
     // Fetch both fuel stations and charging stations in the current view
     const q = `[out:json][timeout:25];(
       node["amenity"~"fuel|charging_station"](${bbox});
@@ -1028,15 +1031,15 @@ async function fetchFromOverpass(lat, lng, radiusKm) {
     const data = await res.json();
     if (data.elements && data.elements.length > 0) {
       const newStations = data.elements.map(normalizeOSM).filter(Boolean);
-      
+
       // Deduplicate by ID and location (strict 50m threshold)
       newStations.forEach(s => {
         const isDup = chargersData.some(existing => {
           const existingId = String(existing.ID).replace('pb-osm-', '');
           const newId = String(s.ID);
-          return existingId === newId || 
-          (Math.abs(existing.AddressInfo.Latitude - s.AddressInfo.Latitude) < 0.0002 && 
-           Math.abs(existing.AddressInfo.Longitude - s.AddressInfo.Longitude) < 0.0002);
+          return existingId === newId ||
+            (Math.abs(existing.AddressInfo.Latitude - s.AddressInfo.Latitude) < 0.0002 &&
+              Math.abs(existing.AddressInfo.Longitude - s.AddressInfo.Longitude) < 0.0002);
         });
         if (!isDup) chargersData.push(s);
       });
@@ -1077,7 +1080,7 @@ function normalizeOCM(raw) {
     Qty: c.Quantity || 1
   }));
   const media = (raw.MediaItems || []).filter(m => m.ItemURL).map(m => m.ItemURL);
-  
+
   return {
     ID: raw.ID,
     AddressInfo: {
@@ -1125,12 +1128,12 @@ function normalizeOSM(node) {
   };
   for (const [k, label] of Object.entries(sockets)) {
     if (t[k]) conns.push({
-      Type: label, PowerKW: parseFloat(t[k+':output']) || null,
+      Type: label, PowerKW: parseFloat(t[k + ':output']) || null,
       Level: label.includes('CCS') || label.includes('CHAdeMO') || label.includes('Tesla') ? 'Level 3' : 'Level 2',
       Qty: parseInt(t[k]) || 1
     });
   }
-  
+
   if (!conns.length && !isFuel) conns.push({ Type: 'Standard', PowerKW: null, Level: 'Level 2', Qty: 1 });
 
   return {
@@ -1145,7 +1148,7 @@ function normalizeOSM(node) {
     HasEV: conns.length > 0,
     AddressInfo: {
       Title: t.name || t.operator || t.brand || (isFuel ? 'Petrol Bunk' : 'EV Charging Station'),
-      AddressLine1: t['addr:street'] ? `${t['addr:housenumber']||''} ${t['addr:street']}`.trim() : '',
+      AddressLine1: t['addr:street'] ? `${t['addr:housenumber'] || ''} ${t['addr:street']}`.trim() : '',
       AddressLine2: t['addr:place'] || '', Town: t['addr:city'] || '',
       State: t['addr:state'] || '', Postcode: t['addr:postcode'] || '',
       Country: t['addr:country'] || '',
@@ -1237,7 +1240,7 @@ function normalizeChargingStation(node) {
     Points: parseInt(t.capacity, 10) || connections.length,
     _src: 'osm',
     _needsGeocode: !t['addr:street'],
-    
+
     // Petrol Bunk Specific fields
     IsPetrolBunk: true,
     Brand: matchedBrand !== 'Unknown' ? matchedBrand : brandStr,
@@ -1252,7 +1255,7 @@ function normalizeChargingStation(node) {
 }
 
 // ============= GLOBAL ERROR HANDLER =============
-window.onerror = function(msg, url, lineNo, columnNo, error) {
+window.onerror = function (msg, url, lineNo, columnNo, error) {
   const errorMsg = 'Error: ' + msg + '\nScript: ' + url + '\nLine: ' + lineNo;
   console.error(errorMsg);
   // Only show alert for severe errors that break the app
@@ -1268,8 +1271,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function formatDistance(km) {
@@ -1302,11 +1305,11 @@ function renderMarkers() {
   chargersData.forEach((ch, idx) => {
     const a = ch.AddressInfo;
     const isOp = ch.Status.IsOp;
-    const hasFast = ch.Connections.some(c => (c.Level||'').includes('3') || (c.PowerKW && c.PowerKW >= 50));
+    const hasFast = ch.Connections.some(c => (c.Level || '').includes('3') || (c.PowerKW && c.PowerKW >= 50));
 
     let color = isOp ? '#188038' : '#d93025';
     let iconContent = '';
-    
+
     if (ch.IsPetrolBunk) {
       color = PETROL_COMPANY_COLORS[ch.Brand] || '#d93025';
       const brandInitial = ch.Brand.charAt(0).toUpperCase();
@@ -1345,7 +1348,7 @@ function renderMarkers() {
     });
 
     const marker = L.marker([a.Latitude, a.Longitude], { icon }).addTo(markersLayer);
-    
+
     // Exact location popup as per user request
     if (ch.IsPetrolBunk) {
       marker.bindPopup(`
@@ -1362,9 +1365,9 @@ function renderMarkers() {
 
     // Popup
     const distText = ch._distance !== undefined ? `${formatDistance(ch._distance)} away` : '';
-    
+
     let tagsHtml = `
-      <span style="background:${isOp?'#e6f4ea':'#fce8e6'};color:${isOp?'#188038':'#d93025'};
+      <span style="background:${isOp ? '#e6f4ea' : '#fce8e6'};color:${isOp ? '#188038' : '#d93025'};
         padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;">
         ${isOp ? '● Available' : '● Offline'}
       </span>
@@ -1435,7 +1438,7 @@ function renderResults() {
     if (reqFast || reqL2) {
       let match = false;
       ch.Connections.forEach(c => {
-        const lv = (c.Level||'').toLowerCase();
+        const lv = (c.Level || '').toLowerCase();
         const pw = c.PowerKW || 0;
         if (reqFast && (lv.includes('3') || pw >= 50)) match = true;
         if (reqL2 && (lv.includes('2') || (pw >= 3 && pw < 50))) match = true;
@@ -1504,7 +1507,7 @@ function renderResults() {
   if (subtitle) subtitle.textContent = `${visibleCount} EV charging station${visibleCount !== 1 ? 's' : ''} within 5 km`;
 
   container.innerHTML = html || '<div class="result-card-v2"><div class="rc-title">No stations found</div><div class="rc-type-label">Try moving the map or increasing range.</div></div>';
-  
+
   // Attach click events
   container.querySelectorAll('.result-card-v2').forEach(card => {
     card.addEventListener('click', (e) => {
@@ -1570,7 +1573,7 @@ function applyFilters() {
     if (reqFast || reqL2) {
       let match = false;
       ch.Connections.forEach(c => {
-        const lv = (c.Level||'').toLowerCase();
+        const lv = (c.Level || '').toLowerCase();
         const pw = c.PowerKW || 0;
         if (reqFast && (lv.includes('3') || pw >= 50)) match = true;
         if (reqL2 && (lv.includes('2') || (pw >= 3 && pw < 50))) match = true;
@@ -1612,21 +1615,21 @@ function openSidePanel(charger) {
   // Ratings & Reviews (Premium UI matching image reference)
   const titleContainer = $('spName').parentNode;
   titleContainer.querySelectorAll('.rating-row').forEach(r => r.remove());
-  
+
   if (charger.Rating) {
     const ratingRow = document.createElement('div');
     ratingRow.className = 'rating-row';
     ratingRow.style.cssText = "display:flex; align-items:center; gap:4px; margin-bottom:8px; font-family:Roboto,sans-serif;";
-    
+
     const stars = Math.floor(charger.Rating);
     const hasHalf = (charger.Rating % 1) >= 0.5;
     let starsHtml = '';
-    for(let i=0; i<5; i++) {
-      if(i < stars) starsHtml += '<i class="fas fa-star" style="color:#fbbc04; font-size:12px;"></i>';
-      else if(i === stars && hasHalf) starsHtml += '<i class="fas fa-star-half-alt" style="color:#fbbc04; font-size:12px;"></i>';
+    for (let i = 0; i < 5; i++) {
+      if (i < stars) starsHtml += '<i class="fas fa-star" style="color:#fbbc04; font-size:12px;"></i>';
+      else if (i === stars && hasHalf) starsHtml += '<i class="fas fa-star-half-alt" style="color:#fbbc04; font-size:12px;"></i>';
       else starsHtml += '<i class="far fa-star" style="color:#dadce0; font-size:12px;"></i>';
     }
-    
+
     ratingRow.innerHTML = `
       <span style="font-size:13px; font-weight:500; color:#3c4043;">${charger.Rating}</span>
       <div style="display:flex; align-items:center; margin: 0 2px;">${starsHtml}</div>
@@ -1655,7 +1658,7 @@ function openSidePanel(charger) {
     badge.parentNode.appendChild(svBadge);
   }
 
-  const hasFast = charger.Connections.some(c => (c.Level||'').includes('3') || (c.PowerKW && c.PowerKW >= 50));
+  const hasFast = charger.Connections.some(c => (c.Level || '').includes('3') || (c.PowerKW && c.PowerKW >= 50));
   $('spTypeTxt').textContent = charger.IsHotel ? 'Luxury Hotel' : (charger.IsPetrolBunk ? (charger.HasEV ? 'Petrol + EV Combo' : 'Petrol Bunk') : (hasFast ? 'DC Fast Charging' : 'EV Charging Station'));
 
   // Petrol-specific details
@@ -1741,12 +1744,12 @@ function openSidePanel(charger) {
     setTimeout(() => {
       const lat = a.Latitude;
       const lng = a.Longitude;
-      
+
       // Use custom heading from data or default to 180
-      const heading = (charger.StreetViewHeading !== undefined) ? charger.StreetViewHeading : 180; 
-      
+      const heading = (charger.StreetViewHeading !== undefined) ? charger.StreetViewHeading : 180;
+
       svIframe.src = buildStreetViewUrl(lat, lng, heading, 90);
-      
+
       svIframe.onload = () => {
         svContainer.style.background = 'white';
       };
@@ -1792,7 +1795,7 @@ function openSidePanel(charger) {
     if (charger.IsPetrolBunk) {
       downloadBtn.style.display = '';
       downloadBtn.onclick = () => downloadPetrolDataSheet(charger);
-      
+
       // Update type text & show detailed specs
       const hasEvText = charger.HasEV ? ' + ⚡ EV Charging' : '';
       $('spTypeTxt').textContent = `⛽ ${charger.Brand} Petrol Bunk${hasEvText}`;
@@ -1962,10 +1965,10 @@ async function reverseGeocode(lat, lng) {
     if (data.address) {
       const ad = data.address;
       const street = [ad.house_number, ad.road].filter(Boolean).join(' ');
-      
+
       // Treat building/amenity explicitly if available
       const bldg = ad.building || ad.amenity || ad.shop || '';
-      
+
       if (bldg) {
         $('spAddress').textContent = bldg;
         $('spAddressLine2').textContent = street || (ad.neighbourhood || '');
@@ -1973,11 +1976,11 @@ async function reverseGeocode(lat, lng) {
         $('spAddress').textContent = street || data.display_name.split(',')[0];
         $('spAddressLine2').textContent = ad.neighbourhood || '';
       }
-      
-      $('spCityState').textContent = [ad.city||ad.town||ad.village||ad.suburb, ad.state].filter(Boolean).join(', ');
+
+      $('spCityState').textContent = [ad.city || ad.town || ad.village || ad.suburb, ad.state].filter(Boolean).join(', ');
       $('spPostcode').textContent = ad.postcode || '';
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ============= DIRECTIONS MODE (ALL MODES) =============
@@ -1998,7 +2001,7 @@ function enterDirectionsMode(charger) {
   if ($('dispOrigin')) $('dispOrigin').textContent = 'Your location';
   if ($('dispDest')) $('dispDest').textContent = destTitle || 'Choose destination...';
   if ($('sbDestName')) $('sbDestName').textContent = destTitle || 'Destination';
-  
+
   // Input fields
   if ($('dirDestInput')) {
     $('dirDestInput').value = destTitle;
@@ -2015,7 +2018,7 @@ function enterDirectionsMode(charger) {
       sbImg.src = defaultSvg;
     }
     // Backup error handler if the fetched media URL is broken
-    sbImg.onerror = function() {
+    sbImg.onerror = function () {
       this.onerror = null; // prevent infinite loop
       this.src = defaultSvg;
     };
@@ -2064,7 +2067,7 @@ function enterDirectionsMode(charger) {
           // Use precise estimate in minutes, rounding up for professional accuracy
           let timeMins = Math.ceil(route.duration / 60);
           if (m.isTransit) timeMins = Math.ceil(timeMins * 1.4 + 5);
-          
+
           let routeName = route.legs[0]?.summary || 'route';
           if (m.isTransit) routeName = 'Public Bus Route';
 
@@ -2191,7 +2194,7 @@ function displayActiveRoute() {
 
   // Build turn-by-turn steps
   const stepsEl = $('dirSteps');
-  
+
   // Simulated Landmarks based on city locations for professional look
   const landmarks = [
     "Pass by Yamaha Motor Showroom",
@@ -2209,7 +2212,7 @@ function displayActiveRoute() {
         ? `${(step.distance / 1000).toFixed(1)} km`
         : `${Math.round(step.distance)} m`;
       const iconClass = getManeuverIcon(step.type, step.modifier);
-      
+
       const landmarkText = (i > 0 && i % 3 === 0) ? landmarks[i % landmarks.length] : "";
 
       return `
@@ -2223,7 +2226,7 @@ function displayActiveRoute() {
           ${landmarkText ? `
             <div class="dir-step-landmark">
               <i class="fas fa-info-circle"></i>
-              <span>${landmarkText} (on the right in ${Math.round(step.distance/2)} m)</span>
+              <span>${landmarkText} (on the right in ${Math.round(step.distance / 2)} m)</span>
             </div>` : ''}
           <div class="dir-step-meta">
             <span>${step.distance > 0 ? dist : ''}</span>
@@ -2279,7 +2282,7 @@ function getManeuverText(maneuver) {
   if (!maneuver) return 'Continue';
   const type = maneuver.type || '';
   const mod = maneuver.modifier || '';
-  
+
   if (type === 'depart') return 'Head out';
   if (type === 'arrive') return 'Arrive at destination';
   if (type === 'turn') return `Turn ${mod}`;
@@ -2296,7 +2299,7 @@ function getManeuverIcon(type, modifier) {
   if (!type) return 'fa-arrow-up';
   const t = type.toLowerCase();
   const m = (modifier || '').toLowerCase();
-  
+
   if (t === 'arrive' || t.includes('destination')) return 'fa-flag-checkered';
   if (t === 'depart') return 'fa-play';
   if (t === 'roundabout' || t === 'rotary') return 'fa-sync-alt';
@@ -2384,11 +2387,11 @@ function startNavigation() {
         location: [selectedCharger.AddressInfo.Town, selectedCharger.AddressInfo.State].filter(Boolean).join(', ') || 'Unknown Location',
         timestamp: new Date().toISOString()
       };
-      
+
       // Avoid duplicate consecutive entries
       if (currentUser.recentVisits.length === 0 || currentUser.recentVisits[0].stationName !== visit.stationName) {
         currentUser.recentVisits.unshift(visit);
-        
+
         const usersStr = localStorage.getItem('evcharger_users_db');
         const users = usersStr ? JSON.parse(usersStr) : [];
         const idx = users.findIndex(u => u.email === currentUser.email);
@@ -2415,7 +2418,7 @@ function startNavigation() {
         updateNavigationProgress(lat, lng);
         placeCarMarker(lat, lng, heading);
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: true, maximumAge: 2000 }
     );
   }
@@ -2504,7 +2507,7 @@ function updateNavigationProgress(lat, lng) {
 
 function switchNavMode(newMode) {
   if (newMode === activeMode || !allModeRoutes[newMode]) return;
-  
+
   const modeRoute = allModeRoutes[newMode];
   activeMode = newMode;
 
@@ -2565,7 +2568,7 @@ function setupGallery(charger) {
   const slides = $('gallerySlides');
   const dots = $('galleryDots');
   const idx = charger._idx || 0;
-  
+
   let imgs = [];
   // Use real photos if available from the API (limit to 5)
   if (charger.Media && charger.Media.length > 0) {
@@ -2574,15 +2577,15 @@ function setupGallery(charger) {
     // Fallback to placeholders
     for (let i = 0; i < 3; i++) imgs.push(stationImages[(idx + i) % stationImages.length]);
   }
-  
+
   charger._images = imgs;
 
   slides.innerHTML = imgs.map((src, i) =>
-    `<div class="gallery-slide"><img src="${src}" alt="Station photo ${i+1}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1593941707882-a5bba14938cb?auto=format&fit=crop&w=600&q=80'"></div>`
+    `<div class="gallery-slide"><img src="${src}" alt="Station photo ${i + 1}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1593941707882-a5bba14938cb?auto=format&fit=crop&w=600&q=80'"></div>`
   ).join('');
 
   dots.innerHTML = imgs.map((_, i) =>
-    `<div class="gallery-dot ${i===0?'active':''}" data-index="${i}"></div>`
+    `<div class="gallery-dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`
   ).join('');
 
   dots.querySelectorAll('.gallery-dot').forEach(d => {
@@ -2613,8 +2616,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function updateDistances() {
